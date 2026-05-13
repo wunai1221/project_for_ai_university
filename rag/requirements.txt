@@ -1,0 +1,12 @@
+# RAG 模組所需套件
+# 確認版本後填入，以下為預計使用的套件
+
+chromadb
+sentence-transformers
+python-pptx
+python-docx
+beautifulsoup4
+requests
+easyocr
+Pillow
+numpy
