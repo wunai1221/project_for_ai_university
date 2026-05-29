@@ -1,0 +1,72 @@
+# project_for_ai_university
+
+## 專案簡介
+本專案為一個結合 RAG（Retrieval-Augmented Generation）技術的問答機器人網站，
+針對鉅昕集團旗下六大業務（鋼筋加工、鋼構工程、鋼材買賣及加工、
+太陽能統包、餐廳推廣、農產品推銷）提供智慧問答服務，
+能夠根據多種來源的知識庫（網站、簡報、Word 文件）回答使用者問題。
+
+---
+
+## 團隊分工
+
+| 成員 | 負責模組 | 資料夾 |
+|------|----------|--------|
+| A 同學 | 前端網站介面 | `/frontend` |
+| B 同學 | 後端主程式 & 機器人邏輯 | `/backend` |
+| 我     | 資料處理 & RAG 向量資料庫 | `/rag` |
+
+---
+
+## 專案資料夾結構
+
+```
+rag-chatbot-project/
+│
+├── frontend/          # A 同學負責：網站前端
+├── backend/           # B 同學負責：主程式與機器人
+├── rag/               # 我負責：資料處理與向量資料庫
+├── shared/            # 三人共用的設定、格式規範
+├── docs/              # 文件、會議記錄、交付說明
+└── README.md          # 本文件
+```
+
+---
+
+## 各模組說明
+
+### Frontend（A 同學）
+請見 `/frontend/README.md`
+
+### Backend（B 同學）
+請見 `/backend/README.md`
+
+### RAG 資料庫（我）
+請見 `/rag/README.md`
+
+---
+
+## 模組之間的串接方式
+
+```
+使用者輸入問題
+     ↓
+Frontend 傳送問題給 Backend API
+     ↓
+Backend 呼叫 RAG 向量資料庫查詢相關段落
+     ↓
+Backend 將查詢結果 + 問題組合後送給 LLM
+     ↓
+LLM 生成回答，回傳給 Frontend 顯示
+```
+
+### 重要介面約定（三人需對齊）
+- Frontend ↔ Backend：API 格式請見 `/shared/api_spec.md`
+- Backend ↔ RAG：向量庫查詢方式請見 `/shared/vectorstore_spec.md`
+
+---
+
+## 環境需求
+- Python 3.10+
+- Node.js（前端，版本由 A 同學確認）
+- 詳細套件請見各子模組的 `requirements.txt` 或 `package.json`
