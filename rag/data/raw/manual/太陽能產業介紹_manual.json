@@ -1,0 +1,84 @@
+[
+  {
+    "text": "太陽能 EPC 指的是太陽能電廠的統包工程公司，名稱源自 E（Engineering 工程設計）、P（Procurement 採購）、C（Construction 施工建置），負責將太陽能電廠從土地評估到正式併聯發電的完整過程。",
+    "source_file": "太陽能產業介紹.docx",
+    "source_type": "manual",
+    "page_or_section": "definition",
+    "category_hint": [
+      "太陽能統包設計到送電完成"
+    ],
+    "category": "",
+    "tags": [
+      "EPC",
+      "太陽能",
+      "定義"
+    ],
+    "date_processed": "2026-06-01"
+  },
+  {
+    "text": "EPC 主要工作內容包含：一、工程設計（系統容量規劃、鋼構支架設計、台電/能源局法規申請）；二、材料採購（太陽能模組、逆變器、鋼構支架如C型鋼/H型鋼、配電設備）；三、施工建置（基樁工程、鋼構組立、模組安裝、測試與試運轉）。",
+    "source_file": "太陽能產業介紹.docx",
+    "source_type": "manual",
+    "page_or_section": "main_tasks",
+    "category_hint": [
+      "太陽能統包設計到送電完成"
+    ],
+    "category": "",
+    "tags": [
+      "工程設計",
+      "採購",
+      "施工",
+      "太陽能模組"
+    ],
+    "date_processed": "2026-06-01"
+  },
+  {
+    "text": "太陽能 EPC 的獲利模式主要包含整體工程毛利、透過大量採購產生的材料價差、透過設計最佳化節省成本，以及電廠完工後的長期維運（O&M）收入。",
+    "source_file": "太陽能產業介紹.docx",
+    "source_type": "manual",
+    "page_or_section": "business_model",
+    "category_hint": [
+      "太陽能統包設計到送電完成"
+    ],
+    "category": "",
+    "tags": [
+      "工程利潤",
+      "維運",
+      "成本控制"
+    ],
+    "date_processed": "2026-06-01"
+  },
+  {
+    "text": "EPC 產業的核心競爭能力包括：專案管理能力（整合土建、鋼構、電機與台電協調）、成本控制能力（應對材料價格波動）、現場施工品質（影響發電效率與安全）以及對政府法規流程的熟悉度。",
+    "source_file": "太陽能產業介紹.docx",
+    "source_type": "manual",
+    "page_or_section": "core_competencies",
+    "category_hint": [
+      "太陽能統包設計到送電完成"
+    ],
+    "category": "",
+    "tags": [
+      "專案管理",
+      "成本控制",
+      "法規"
+    ],
+    "date_processed": "2026-06-01"
+  },
+  {
+    "text": "EPC 產業的風險與未來趨勢：面臨原物料價格波動與工期延誤等風險。未來趨勢朝向大型化、儲能整合、高壓電工程、AI監控維運與綠電交易發展，具備資金調度與長期維運能力的廠商更具競爭力。",
+    "source_file": "太陽能產業介紹.docx",
+    "source_type": "manual",
+    "page_or_section": "trends_risks",
+    "category_hint": [
+      "太陽能統包設計到送電完成"
+    ],
+    "category": "",
+    "tags": [
+      "原物料波動",
+      "儲能",
+      "綠電",
+      "未來趨勢"
+    ],
+    "date_processed": "2026-06-01"
+  }
+]

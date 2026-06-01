@@ -1,4 +1,3 @@
-# services/word_service.py
 from docx import Document
 from docx.shared import Pt
 from datetime import datetime

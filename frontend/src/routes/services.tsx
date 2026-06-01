@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Check, Wrench, Anchor, Building2, Layers, Leaf } from "lucide-react";
+import { ArrowRight, Check, Wrench, Building2, Layers, Sun, Utensils, Sprout } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/routes/about";
 import rebarImg from "@/assets/service-rebar.jpg";
-import boltsImg from "@/assets/service-bolts.jpg";
 import structureImg from "@/assets/service-structure.jpg";
+import materialsVideo from "../../public/videos/materials.mp4.asset.json";
+import rebarVideo from "../../public/videos/rebar.mp4.asset.json";
+import boltsVideo from "../../public/videos/bolts.mp4.asset.json";
+import structureVideo from "../../public/videos/structure.mp4.asset.json";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -27,39 +30,58 @@ export const Route = createFileRoute("/services")({
 
 const services = [
   {
-    icon: Layers,
-    title: "鋼鐵材料供應",
-    desc: "提供完整鋼鐵材料品項，依工程需求快速調配，從規格諮詢到送達現場全程協助。",
-    img: rebarImg,
-    items: ["H 型鋼 / I 型鋼", "鋼板 / 鋼捲", "角鋼 / 槽鋼", "圓鋼 / 方管"],
-  },
-  {
+    id: "rebar",
     icon: Wrench,
     title: "鋼筋加工",
     desc: "精密鋼筋加工服務，依工程圖面進行裁切、彎曲、續接，確保現場施工效率。",
     img: rebarImg,
+    video: rebarVideo.url,
     items: ["精準裁切彎曲", "螺紋套筒續接", "依圖面客製", "符合 CNS 規範"],
   },
   {
-    icon: Anchor,
-    title: "基礎螺栓製造",
-    desc: "專業基礎螺栓、地腳螺栓、化學螺栓製造，依結構需求客製尺寸與材質。",
-    img: boltsImg,
-    items: ["地腳 / 基礎螺栓", "化學錨栓", "客製尺寸規格", "防鏽處理"],
-  },
-  {
+    id: "structure",
     icon: Building2,
     title: "鋼構工程",
     desc: "鋼構設計、製造、現場安裝一條龍服務，廠房、商業建築與特殊結構皆可承接。",
     img: structureImg,
+    video: structureVideo.url,
     items: ["鋼構設計製造", "現場吊裝施工", "廠房 / 商辦結構", "結構補強改建"],
   },
   {
-    icon: Leaf,
-    title: "綠能與工程應用",
-    desc: "投入再生能源工程結構件，包含太陽能支架、風電基礎與相關綠能工程件。",
+    id: "materials",
+    icon: Layers,
+    title: "鋼材買賣及加工",
+    desc: "提供完整鋼材買賣與加工服務，依工程需求快速調配，從規格諮詢到送達現場全程協助。",
+    img: rebarImg,
+    video: materialsVideo.url,
+    items: ["H 型鋼 / I 型鋼", "鋼板 / 鋼捲", "角鋼 / 槽鋼", "客製裁切加工"],
+  },
+  {
+    id: "solar",
+    icon: Sun,
+    title: "太陽能統包",
+    desc: "從設計規劃、申請、施工到送電完成一條龍統包服務，協助業主完整建置太陽能系統。",
     img: structureImg,
-    items: ["太陽能支架", "風電基礎件", "綠建築鋼構", "綠能週邊工程"],
+    video: "/videos/green.mp4",
+    items: ["系統設計規劃", "申請與併聯送電", "施工安裝統包", "後續維運服務"],
+  },
+  {
+    id: "restaurant",
+    icon: Utensils,
+    title: "餐廳推廣",
+    desc: "結合在地餐飲品牌行銷與通路推廣，協助餐廳擴展知名度與營收。",
+    img: structureImg,
+    video: boltsVideo.url,
+    items: ["品牌行銷策略", "活動企劃推廣", "通路合作媒合", "社群曝光協助"],
+  },
+  {
+    id: "agriculture",
+    icon: Sprout,
+    title: "農產品推銷",
+    desc: "協助在地優質農產品行銷推廣，建立穩定銷售通路與品牌價值。",
+    img: rebarImg,
+    video: structureVideo.url,
+    items: ["產地直送推廣", "通路開發合作", "品牌包裝建議", "活動展售協助"],
   },
 ];
 
@@ -77,18 +99,21 @@ function ServicesPage() {
           {services.map((s, i) => (
             <article
               key={s.title}
-              className={`grid md:grid-cols-2 gap-10 items-center ${
+              id={s.id}
+              className={`scroll-mt-24 grid md:grid-cols-2 gap-10 items-center ${
                 i % 2 === 1 ? "md:[&>*:first-child]:order-2" : ""
               }`}
             >
               <div className="relative">
-                <img
-                  src={s.img}
-                  alt={s.title}
-                  loading="lazy"
-                  width={800}
-                  height={600}
-                  className="rounded-lg shadow-steel w-full aspect-[4/3] object-cover"
+                <video
+                  src={s.video}
+                  poster={s.img}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  className="rounded-lg shadow-steel w-full aspect-[4/3] object-cover bg-muted"
                 />
                 <span className="absolute top-4 left-4 flex h-11 w-11 items-center justify-center rounded-md bg-ember text-accent-foreground shadow-ember">
                   <s.icon size={20} />

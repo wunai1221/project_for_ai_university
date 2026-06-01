@@ -1,8 +1,0 @@
-.env
-*.env
-__pycache__/
-*.pyc
-.venv/
-venv/
-*.log
-chroma_db/        # 之後 RAG 向量庫也要擋掉

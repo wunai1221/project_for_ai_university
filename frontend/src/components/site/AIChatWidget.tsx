@@ -1,33 +1,39 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Loader2, CheckCircle2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-type CollectedData = {
-  name: string;
-  phone: string;
-  service: string;
-  date: string;
-  color: string;
-  note: string;
+// 對齊 Python 後端 chat.py 的 ChatResponse
+type Collected = {
+  name?: string | null;
+  phone?: string | null;
+  service?: string | null;
+  date?: string | null;
+  color?: string | null;
+  note?: string | null;
 };
 
 type ChatApiResponse = {
-  reply: string;
-  session_id: string;
-  collected: CollectedData | null;
+  reply?: string;
+  session_id?: string;
+  collected?: Collected | null;
 };
-
-const PYTHON_API_URL = "http://localhost:8000/api/chat";
 
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "您好，我是 AI 客服 👋\n請告訴我您想要的服務內容，我會一步一步協助您完成資料填寫。",
+    "您好，我是鉅昕鋼鐵 AI 客服 👋\n請告訴我您需要的服務。",
 };
 
-function createSessionId() {
-  return `session_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+const CHAT_API_URL = "http://localhost:8000/api/chat";
+
+// 建立並保存 session_id（同一個瀏覽器分頁共用，避免後端 session_store 把每次當新對話）
+function createSessionId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export function AIChatWidget() {
@@ -36,20 +42,15 @@ export function AIChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [sessionId] = useState(() => createSessionId());
-
+  const sessionIdRef = useRef<string>(createSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading, submitted]);
 
   async function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
-
     const text = input.trim();
     if (!text || loading) return;
 
@@ -58,49 +59,62 @@ export function AIChatWidget() {
     setLoading(true);
 
     try {
-      const res = await fetch(PYTHON_API_URL, {
+      const res = await fetch(CHAT_API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          session_id: sessionId,
+          session_id: sessionIdRef.current,
         }),
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Python backend error:", res.status, errorText);
-
-        setMessages((m) => [
-          ...m,
-          { role: "assistant", content: "⚠️ AI 服務暫時無法回應，請稍後再試。" },
-        ]);
-        return;
+        throw new Error(`HTTP ${res.status}`);
       }
 
-      const result = (await res.json()) as ChatApiResponse;
-      console.log("Python response:", result);
+      const json = (await res.json()) as ChatApiResponse;
+      const reply = json.reply || "...";
+      setMessages((m) => [...m, { role: "assistant", content: reply }]);
 
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: result.reply || "..." },
-      ]);
+      // 後端蒐集完五項資訊後會回傳 collected 物件
+      if (json.collected) {
+        const c = json.collected;
 
-      if (result.collected) {
-        setSubmitted(true);
-        setMessages((m) => [
-          ...m,
-          {
-            role: "assistant",
-            content:
-              "✅ 資料已收集完成！系統已自動建立服務單，我們將盡快與您聯繫。",
-          },
-        ]);
+        // 把 service / date / color / note 合併成 message 欄位寫入 Supabase
+        const messageParts: string[] = [];
+        if (c.service) messageParts.push(`服務內容：${c.service}`);
+        if (c.date) messageParts.push(`期望日期：${c.date}`);
+        if (c.color) messageParts.push(`顏色喜好：${c.color}`);
+        if (c.note) messageParts.push(`備註：${c.note}`);
+        const message = messageParts.join("\n") || "(無內容)";
+
+        const { error } = await supabase.from("inquiries").insert({
+          name: c.name ?? null,
+          phone: c.phone ?? null,
+          company: null,
+          email: null,
+          message,
+          source: "ai-chat",
+        });
+
+        if (error) {
+          console.error("Insert inquiry failed", error);
+          setMessages((m) => [
+            ...m,
+            { role: "assistant", content: "⚠️ 資料儲存失敗，請稍後再試或改用聯絡表單。" },
+          ]);
+        } else {
+          setSubmitted(true);
+          setMessages((m) => [
+            ...m,
+            { role: "assistant", content: "✅ 資料已成功送出！我們將盡快與您聯繫。" },
+          ]);
+          // 後端已 clear_session，前端也換新的 session_id 以便下一輪對話
+          sessionIdRef.current = createSessionId();
+        }
       }
     } catch (err) {
-      console.error("Chat error:", err);
+      console.error("Chat API error", err);
       setMessages((m) => [
         ...m,
         { role: "assistant", content: "⚠️ 連線發生問題，請稍後再試。" },
@@ -134,13 +148,10 @@ export function AIChatWidget() {
                 <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-[var(--steel-deep)]" />
               </div>
               <div>
-                <p className="text-sm font-semibold">AI 客服</p>
-                <p className="text-[11px] text-primary-foreground/70">
-                  線上 · 即時回覆
-                </p>
+                <p className="text-sm font-semibold">鉅昕鋼鐵 AI 客服</p>
+                <p className="text-[11px] text-primary-foreground/70">線上 · 即時回覆</p>
               </div>
             </div>
-
             <button
               onClick={() => setOpen(false)}
               className="p-1.5 rounded-md hover:bg-white/10 transition"
@@ -157,9 +168,7 @@ export function AIChatWidget() {
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`flex ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
@@ -172,7 +181,6 @@ export function AIChatWidget() {
                 </div>
               </div>
             ))}
-
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-3.5 py-2.5">
@@ -180,7 +188,6 @@ export function AIChatWidget() {
                 </div>
               </div>
             )}
-
             {submitted && (
               <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-300">
                 <CheckCircle2 size={16} />
@@ -207,7 +214,6 @@ export function AIChatWidget() {
               maxLength={1000}
               className="flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring max-h-24"
             />
-
             <button
               type="submit"
               disabled={loading || !input.trim()}

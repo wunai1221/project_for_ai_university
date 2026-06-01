@@ -1,16 +1,27 @@
-# routers/chat.py
 import re
 import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
+
 from services.llm_service import chat_with_model
 from services.word_service import fill_template
 from services.session_store import get_history, add_message, clear_session
+from services.rag_service import search as rag_search
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
+
 SYSTEM_PROMPT = """你是一位專業的客服助理。
-你的任務是根據資料回答客戶的問題，但目前沒有資料所以自由發揮，如果客戶有意願要購買透過對話，依序蒐集以下資訊：
+
+你的任務有兩個：
+
+一、根據「參考資料」回答客戶問題
+- 優先根據參考資料回答。
+- 如果參考資料不足以回答，請誠實告知「目前資料中沒有明確資訊」。
+- 不要編造不存在的公司資訊、價格、規格或承諾。
+- 請用自然、親切、專業的繁體中文回答。
+
+二、如果客戶有購買、詢價、預約、合作或進一步聯絡的意願，請透過對話依序蒐集以下資訊：
 
 1. 客戶姓名
 2. 客戶聯絡方式（電話）
@@ -20,9 +31,9 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 6. 備註（若無請填無）
 
 注意事項：
-- 每次只問一個問題，不要一次問全部
-- 用親切友善的語氣
-- 確認所有資訊蒐集完畢後，輸出以下區塊：
+- 每次只問一個問題，不要一次問全部。
+- 不要在資料還沒收集完整時輸出 DATA。
+- 確認所有資訊蒐集完畢後，才輸出以下區塊：
 
 <<<DATA>>>
 {
@@ -35,26 +46,32 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 }
 <<<END>>>
 
-請用繁體中文回答。"""
+請用繁體中文回答。
+"""
 
-
-# ── 工具函式 ──────────────────────────────────────────
 
 def extract_data(reply: str) -> dict | None:
-    match = re.search(r'<<<DATA>>>(.*?)<<<END>>>', reply, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group(1).strip())
-        except json.JSONDecodeError:
-            return None
-    return None
+    """從 LLM 回覆中擷取 <<<DATA>>> ... <<<END>>> 裡面的 JSON"""
+    match = re.search(r"<<<DATA>>>(.*?)<<<END>>>", reply, re.DOTALL)
+
+    if not match:
+        return None
+
+    try:
+        return json.loads(match.group(1).strip())
+    except json.JSONDecodeError:
+        return None
 
 
 def clean_reply(reply: str) -> str:
-    return re.sub(r'<<<DATA>>>.*?<<<END>>>', '', reply, flags=re.DOTALL).strip()
+    """移除給後端使用的 DATA 區塊，避免顯示給使用者"""
+    return re.sub(
+        r"<<<DATA>>>.*?<<<END>>>",
+        "",
+        reply,
+        flags=re.DOTALL
+    ).strip()
 
-
-# ── Schema ────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
     message: str
@@ -64,10 +81,13 @@ class ChatRequest(BaseModel):
     @classmethod
     def message_not_empty(cls, v: str) -> str:
         v = v.strip()
+
         if not v:
             raise ValueError("訊息不能空白")
+
         if len(v) > 2000:
             raise ValueError("訊息過長，請限制在 2000 字以內")
+
         return v
 
 
@@ -77,31 +97,73 @@ class ChatResponse(BaseModel):
     collected: dict | None = None
 
 
-# ── Endpoints ─────────────────────────────────────────
-
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    # 記錄使用者訊息
+    """
+    主要聊天 API：
+    1. 先用使用者問題查詢向量資料庫
+    2. 把查詢到的內容塞進 system prompt
+    3. 呼叫 LLM 回答
+    4. 如果 LLM 輸出 DATA，產生 Word 表單
+    """
+
+    # 1. 查詢 RAG 向量資料庫（已移除 category 過濾）
+    try:
+        context = rag_search(
+            query=request.message,
+            top_k=5
+        )
+    except Exception as e:
+        print(f"RAG 查詢失敗：{e}")
+        context = ""
+
+    # 2. 記錄使用者訊息
     add_message(request.session_id, "user", request.message)
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        *get_history(request.session_id),
-    ]
+    # 3. 組合 system prompt + RAG 參考資料
+    system_with_context = SYSTEM_PROMPT
 
+    if context:
+        system_with_context += f"""
+
+以下是參考資料，請優先根據這些內容回答：
+
+{context}
+"""
+    else:
+        system_with_context += """
+
+目前沒有查詢到足夠的參考資料。
+如果使用者問題需要資料庫內容才能回答，請誠實告知目前資料不足。
+"""
+
+    # 4. 組合對話歷史
+    messages = [
+    {"role": "system", "content": SYSTEM_PROMPT},
+    *get_history(request.session_id),
+]
+
+    # 5. 呼叫 LLM
     try:
         raw_reply = await chat_with_model(messages)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # 記錄 LLM 回覆
+    # 6. 記錄 AI 回覆
     add_message(request.session_id, "assistant", raw_reply)
 
+    # 7. 檢查是否已收集完成資料
     collected = extract_data(raw_reply)
-    if collected:
-        fill_template(collected, request.session_id)
-        clear_session(request.session_id)  # 蒐集完清掉記憶體
 
+    if collected:
+        try:
+            fill_template(collected, request.session_id)
+        except Exception as e:
+            print(f"Word 產生失敗：{e}")
+
+        clear_session(request.session_id)
+
+    # 8. 回傳乾淨回覆給前端
     return ChatResponse(
         reply=clean_reply(raw_reply),
         session_id=request.session_id,
@@ -111,4 +173,6 @@ async def chat(request: ChatRequest):
 
 @router.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok"
+    }
