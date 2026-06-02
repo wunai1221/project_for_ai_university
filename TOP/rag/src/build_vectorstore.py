@@ -18,6 +18,9 @@ RAW_DIRS = [
     os.path.join(os.path.dirname(__file__), "../data/raw/websites"),
     os.path.join(os.path.dirname(__file__), "../data/raw/pptx"),
     os.path.join(os.path.dirname(__file__), "../data/raw/docx"),
+    os.path.join(os.path.dirname(__file__), "../data/raw/restaurant"),
+    os.path.join(os.path.dirname(__file__), "../data/raw/manual"),
+    os.path.join(os.path.dirname(__file__), "../data/raw/manual_ppt"),
 ]
 
 # 向量庫輸出位置
@@ -32,7 +35,6 @@ def load_all_data() -> list[dict]:
     """讀取所有 JSON 檔案，跳過合併檔避免重複"""
     all_data = []
     for raw_dir in RAW_DIRS:
-        # 只讀各自的檔案，跳過 _all_ 開頭的合併檔
         json_files = glob.glob(os.path.join(raw_dir, "*.json"))
         for filepath in json_files:
             filename = os.path.basename(filepath)
@@ -58,7 +60,6 @@ def build_vectorstore():
     os.makedirs(VECTORSTORE_DIR, exist_ok=True)
     client = chromadb.PersistentClient(path=VECTORSTORE_DIR)
 
-    # 如果已存在就刪除重建
     try:
         client.delete_collection("rag_collection")
     except:

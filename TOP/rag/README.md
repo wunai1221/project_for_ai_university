@@ -1,7 +1,7 @@
 # RAG 資料處理模組
 
 ## 負責範圍
-本資料夾負責將所有原始資料（網站、簡報、Word）處理成可被查詢的向量資料庫，
+本資料夾負責將所有原始資料（網站、簡報、Word、餐廳資料）處理成可被查詢的向量資料庫，
 供 B 同學的 Backend 模組使用。
 
 ---
@@ -23,6 +23,9 @@
 | 網站 | 2 個 | `/rag/data/raw/websites/` |
 | 簡報（PPTX） | 2 份 | `/rag/data/raw/pptx/` |
 | Word（DOCX） | 3 份 | `/rag/data/raw/docx/` |
+| 餐廳資料 | 28 筆 | `/rag/data/raw/restaurant/` |
+| 手動整理 Word | 3 份 | `/rag/data/raw/manual/` |
+| 手動整理 PPT | 1 份 | `/rag/data/raw/manual_ppt/` |
 
 ---
 
@@ -48,18 +51,26 @@
 | 太陽能產業介紹.docx | 太陽能統包設計到送電完成 |
 | 鉅昕集團介紹(完整).pptx | 六大類別皆有 |
 | 最適合安裝廠房屋頂的不銹鋼鋼瓦太陽能系統.pptx | 太陽能統包設計到送電完成 |
+| restaurant_data.json | 餐廳推廣 |
+| 鉅昕集團介紹(完整).pptx（手動整理版） | 鋼筋加工、鋼構工程、鋼材買賣及加工、太陽能統包設計到送電完成、農產品推銷 |
+| 農產品公司介紹.docx（手動整理版） | 農產品推銷 |
+| 鋼筋加工產業的主要工作.docx（手動整理版） | 鋼筋加工、鋼構工程、鋼材買賣及加工 |
+| 太陽能產業介紹.docx（手動整理版） | 太陽能統包設計到送電完成 |
 
 ---
 
 ## 處理流程
 
 ```
-原始資料（網站/PPTX/DOCX）
+原始資料（網站/PPTX/DOCX/餐廳/手動整理）
         ↓
   Step 1：抽取文字
-  網站   → crawl_websites.py（含雜訊過濾）
-  PPTX  → extract_pptx.py（含 EasyOCR 圖片文字辨識）
-  DOCX  → extract_docx.py
+  網站       → crawl_websites.py（含雜訊過濾）
+  PPTX      → extract_pptx.py（含 EasyOCR 圖片文字辨識）
+  DOCX      → extract_docx.py
+  餐廳資料   → add_restaurant.py（菜色、環境、菜單描述）
+  手動整理Word → add_manual_docs.py
+  手動整理PPT  → add_manual_ppt.py
         ↓
   Step 2：向量化並存入資料庫
   build_vectorstore.py
@@ -81,13 +92,19 @@ rag/
 │   └── raw/
 │       ├── websites/     # 網站爬取結果（JSON）
 │       ├── pptx/         # PPT 抽取結果（JSON）
-│       └── docx/         # Word 抽取結果（JSON）
+│       ├── docx/         # Word 抽取結果（JSON）
+│       ├── restaurant/   # 餐廳菜色與環境描述（JSON）
+│       ├── manual/       # 手動整理 Word（JSON）
+│       └── manual_ppt/   # 手動整理 PPT（JSON）
 │
 ├── src/
 │   ├── extract/
 │   │   ├── crawl_websites.py    # 網站爬蟲
 │   │   ├── extract_pptx.py      # PPT 抽取（含OCR）
-│   │   └── extract_docx.py      # Word 抽取
+│   │   ├── extract_docx.py      # Word 抽取
+│   │   ├── add_restaurant.py    # 餐廳資料新增
+│   │   ├── add_manual_docs.py   # 手動整理 Word 新增
+│   │   └── add_manual_ppt.py    # 手動整理 PPT 新增
 │   ├── build_vectorstore.py     # 向量化與建立資料庫
 │   └── test_query.py            # 查詢測試
 │
@@ -102,11 +119,11 @@ rag/
 {
   "text": "段落內文",
   "source_file": "來源檔案名稱",
-  "source_type": "web / pptx / docx",
-  "page_or_section": "第3張投影片 / 網址 / 開頭",
+  "source_type": "web / pptx / docx / restaurant / manual / manual_ppt",
+  "page_or_section": "第3張投影片 / 網址 / 開頭 / 招牌菜色",
   "category_hint": ["鋼筋加工"],
-  "category": "",
-  "date_processed": "2026-05-13"
+  "category": "餐廳推廣",
+  "date_processed": "2026-06-01"
 }
 ```
 
@@ -119,8 +136,23 @@ rag/
 | 向量庫格式 | Chroma |
 | 資料夾位置 | `/rag/vectorstore/` |
 | Embedding 模型 | paraphrase-multilingual-MiniLM-L12-v2 |
-| 總筆數 | 162 筆 |
+| 總筆數 | 207 筆 |
 | 查詢回傳筆數 | top-5 |
+
+---
+
+## 環境設定
+
+### 安裝套件
+```bash
+pip install chromadb sentence-transformers python-pptx python-docx beautifulsoup4 requests easyocr Pillow numpy
+```
+
+### B 同學只需要安裝
+```bash
+pip install chromadb sentence-transformers
+```
+第一次執行會自動下載 Embedding 模型，需要網路連線。
 
 ---
 

@@ -25,13 +25,12 @@ while True:
     embedding = model.encode([question]).tolist()
     results = collection.query(
         query_embeddings=embedding,
-        n_results=3
+        n_results=5
     )
 
-    print("\n--- 找到最相關的 3 筆資料 ---")
+    print("\n--- 找到最相關的 5 筆資料 ---")
     for i, (doc, meta) in enumerate(zip(results["documents"][0], results["metadatas"][0])):
         print(f"\n第 {i+1} 筆")
         print(f"來源：{meta['source_file']} / {meta['page_or_section']}")
         print(f"內容：{doc[:150]}...")
     print("---\n")
-    
