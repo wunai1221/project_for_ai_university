@@ -24,11 +24,16 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 二、如果客戶有購買、詢價、預約、合作或進一步聯絡的意願，請透過對話依序蒐集以下資訊：
 
 1. 客戶姓名
-2. 客戶聯絡方式（電話）
-3. 想要的服務內容
-4. 期望日期
-5. 顏色喜好
-6. 備註（若無請填無）
+2. 公司／單位名稱（若無請填無）
+3. 聯絡電話
+4. 電子郵件（若無請填無）
+5. 來源管道（如何得知我們，例如官網、Line、朋友介紹等）
+6. 需求項目／服務類型
+7. 數量與預算範圍（若無請填無）
+8. 規格需求，例如顏色喜好（若無請填無）
+9. 期望日期
+10. 負責業務姓名（若不知道請填無）
+11. 補充說明（若無請填無）
 
 注意事項：
 - 每次只問一個問題，不要一次問全部。
@@ -38,11 +43,16 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 <<<DATA>>>
 {
   "name": "客戶姓名",
-  "phone": "電話號碼",
-  "service": "想要的服務",
+  "company": "公司／單位名稱",
+  "phone": "聯絡電話",
+  "email": "電子郵件",
+  "source": "來源管道",
+  "service": "需求項目／服務類型",
+  "quantity_budget": "數量與預算範圍",
+  "spec": "規格需求",
   "date": "期望日期",
-  "color": "顏色喜好",
-  "note": "備註"
+  "staff": "負責業務",
+  "note": "補充說明"
 }
 <<<END>>>
 
@@ -99,15 +109,7 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """
-    主要聊天 API：
-    1. 先用使用者問題查詢向量資料庫
-    2. 把查詢到的內容塞進 system prompt
-    3. 呼叫 LLM 回答
-    4. 如果 LLM 輸出 DATA，產生 Word 表單
-    """
-
-    # 1. 查詢 RAG 向量資料庫（已移除 category 過濾）
+    # 1. 查詢 RAG 向量資料庫
     try:
         context = rag_search(
             query=request.message,
@@ -137,11 +139,11 @@ async def chat(request: ChatRequest):
 如果使用者問題需要資料庫內容才能回答，請誠實告知目前資料不足。
 """
 
-    # 4. 組合對話歷史
+    # 4. 組合對話歷史（✅ 修正：使用 system_with_context 而非 SYSTEM_PROMPT）
     messages = [
-    {"role": "system", "content": SYSTEM_PROMPT},
-    *get_history(request.session_id),
-]
+        {"role": "system", "content": system_with_context},
+        *get_history(request.session_id),
+    ]
 
     # 5. 呼叫 LLM
     try:
@@ -173,6 +175,4 @@ async def chat(request: ChatRequest):
 
 @router.get("/health")
 async def health_check():
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
