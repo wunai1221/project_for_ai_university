@@ -16,10 +16,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import heroImg from "@/assets/hero-steel.jpg";
 import rebarImg from "@/assets/service-rebar.jpg";
 import structureImg from "@/assets/service-structure.jpg";
-import materialsVideo from "../../public/videos/materials.mp4.asset.json";
-import rebarVideo from "../../public/videos/rebar.mp4.asset.json";
-import boltsVideo from "../../public/videos/bolts.mp4.asset.json";
-import structureVideo from "../../public/videos/structure.mp4.asset.json";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,7 +41,7 @@ const services = [
     title: "鋼筋加工",
     desc: "依工程圖面精準裁切、彎曲、套筒接合等鋼筋加工服務，符合 CNS 規範。",
     img: rebarImg,
-    video: rebarVideo.url,
+    video: "/videos/rebar.mp4",
   },
   {
     id: "structure",
@@ -52,7 +49,7 @@ const services = [
     title: "鋼構工程",
     desc: "從設計、製造到現場安裝一條龍鋼構工程服務，承接廠房、商業建築與特殊結構。",
     img: structureImg,
-    video: structureVideo.url,
+    video: "/videos/structure.mp4",
   },
   {
     id: "materials",
@@ -60,7 +57,7 @@ const services = [
     title: "鋼材買賣及加工",
     desc: "提供各類鋼板、型鋼、H 型鋼、角鋼、槽鋼等鋼材買賣與加工，穩定品質、即時交付。",
     img: rebarImg,
-    video: materialsVideo.url,
+    video: "/videos/materials.mp4",
   },
   {
     id: "solar",
@@ -76,7 +73,7 @@ const services = [
     title: "餐廳推廣",
     desc: "結合在地餐飲品牌行銷與通路推廣，協助餐廳擴展知名度與營收。",
     img: structureImg,
-    video: boltsVideo.url,
+    video: "/videos/bolts.mp4",
   },
   {
     id: "agriculture",
@@ -84,7 +81,7 @@ const services = [
     title: "農產品推銷",
     desc: "協助在地優質農產品行銷推廣，建立穩定銷售通路與品牌價值。",
     img: rebarImg,
-    video: structureVideo.url,
+    video: "/videos/agriculture.mp4",
   },
 ];
 

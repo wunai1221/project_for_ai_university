@@ -11,7 +11,7 @@ const inputSchema = z.object({
   messages: z.array(messageSchema).min(1).max(40),
 });
 
-const PYTHON_API_URL = "http://localhost:8000/api/chat";
+const PYTHON_API_URL = "http://127.0.0.1:8000/api/chat";
 
 interface ApiResponse {
   reply: string;

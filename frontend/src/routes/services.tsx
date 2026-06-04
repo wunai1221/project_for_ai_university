@@ -4,10 +4,6 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { PageHero } from "@/routes/about";
 import rebarImg from "@/assets/service-rebar.jpg";
 import structureImg from "@/assets/service-structure.jpg";
-import materialsVideo from "../../public/videos/materials.mp4.asset.json";
-import rebarVideo from "../../public/videos/rebar.mp4.asset.json";
-import boltsVideo from "../../public/videos/bolts.mp4.asset.json";
-import structureVideo from "../../public/videos/structure.mp4.asset.json";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
@@ -35,7 +31,7 @@ const services = [
     title: "鋼筋加工",
     desc: "精密鋼筋加工服務，依工程圖面進行裁切、彎曲、續接，確保現場施工效率。",
     img: rebarImg,
-    video: rebarVideo.url,
+    video: "/videos/rebar.mp4",
     items: ["精準裁切彎曲", "螺紋套筒續接", "依圖面客製", "符合 CNS 規範"],
   },
   {
@@ -44,7 +40,7 @@ const services = [
     title: "鋼構工程",
     desc: "鋼構設計、製造、現場安裝一條龍服務，廠房、商業建築與特殊結構皆可承接。",
     img: structureImg,
-    video: structureVideo.url,
+    video: "/videos/structure.mp4",
     items: ["鋼構設計製造", "現場吊裝施工", "廠房 / 商辦結構", "結構補強改建"],
   },
   {
@@ -53,7 +49,7 @@ const services = [
     title: "鋼材買賣及加工",
     desc: "提供完整鋼材買賣與加工服務，依工程需求快速調配，從規格諮詢到送達現場全程協助。",
     img: rebarImg,
-    video: materialsVideo.url,
+    video: "/videos/materials.mp4",
     items: ["H 型鋼 / I 型鋼", "鋼板 / 鋼捲", "角鋼 / 槽鋼", "客製裁切加工"],
   },
   {
@@ -71,7 +67,7 @@ const services = [
     title: "餐廳推廣",
     desc: "結合在地餐飲品牌行銷與通路推廣，協助餐廳擴展知名度與營收。",
     img: structureImg,
-    video: boltsVideo.url,
+    video: "/videos/bolts.mp4",
     items: ["品牌行銷策略", "活動企劃推廣", "通路合作媒合", "社群曝光協助"],
   },
   {
@@ -80,7 +76,7 @@ const services = [
     title: "農產品推銷",
     desc: "協助在地優質農產品行銷推廣，建立穩定銷售通路與品牌價值。",
     img: rebarImg,
-    video: structureVideo.url,
+    video: "/videos/agriculture.mp4",
     items: ["產地直送推廣", "通路開發合作", "品牌包裝建議", "活動展售協助"],
   },
 ];

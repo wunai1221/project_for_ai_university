@@ -1,5 +1,6 @@
 import re
 import json
+import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
@@ -10,6 +11,8 @@ from services.rag_service import search as rag_search
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
+# 初始化 Logger
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """你是一位專業的客服助理。
 
@@ -24,11 +27,14 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 二、如果客戶有購買、詢價、預約、合作或進一步聯絡的意願，請透過對話依序蒐集以下資訊：
 
 1. 客戶姓名
-2. 客戶聯絡方式（電話）
-3. 想要的服務內容
-4. 期望日期
-5. 顏色喜好
-6. 備註（若無請填無）
+2. 公司／單位名稱（若無請填無）
+3. 聯絡電話
+4. 電子郵件（若無請填無）
+5. 來源管道（如何得知我們，例如官網、Line、朋友介紹等）
+6. 需求項目／服務類型
+7. 數量與預算範圍（若無請填無）
+8. 規格需求，例如顏色喜好（若無請填無）
+9. 補充說明（若無請填無）
 
 注意事項：
 - 每次只問一個問題，不要一次問全部。
@@ -38,11 +44,14 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 <<<DATA>>>
 {
   "name": "客戶姓名",
-  "phone": "電話號碼",
-  "service": "想要的服務",
-  "date": "期望日期",
-  "color": "顏色喜好",
-  "note": "備註"
+  "company": "公司／單位名稱",
+  "phone": "聯絡電話",
+  "email": "電子郵件",
+  "source": "來源管道",
+  "service": "需求項目／服務類型",
+  "quantity_budget": "數量與預算範圍",
+  "spec": "規格需求",
+  "note": "補充說明"
 }
 <<<END>>>
 
@@ -53,24 +62,18 @@ SYSTEM_PROMPT = """你是一位專業的客服助理。
 def extract_data(reply: str) -> dict | None:
     """從 LLM 回覆中擷取 <<<DATA>>> ... <<<END>>> 裡面的 JSON"""
     match = re.search(r"<<<DATA>>>(.*?)<<<END>>>", reply, re.DOTALL)
-
     if not match:
         return None
-
     try:
         return json.loads(match.group(1).strip())
     except json.JSONDecodeError:
+        logger.error(f"JSON 解析失敗，原始文字: {match.group(1)}")
         return None
 
 
 def clean_reply(reply: str) -> str:
     """移除給後端使用的 DATA 區塊，避免顯示給使用者"""
-    return re.sub(
-        r"<<<DATA>>>.*?<<<END>>>",
-        "",
-        reply,
-        flags=re.DOTALL
-    ).strip()
+    return re.sub(r"<<<DATA>>>.*?<<<END>>>", "", reply, flags=re.DOTALL).strip()
 
 
 class ChatRequest(BaseModel):
@@ -81,13 +84,10 @@ class ChatRequest(BaseModel):
     @classmethod
     def message_not_empty(cls, v: str) -> str:
         v = v.strip()
-
         if not v:
             raise ValueError("訊息不能空白")
-
         if len(v) > 2000:
             raise ValueError("訊息過長，請限制在 2000 字以內")
-
         return v
 
 
@@ -99,49 +99,28 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """
-    主要聊天 API：
-    1. 先用使用者問題查詢向量資料庫
-    2. 把查詢到的內容塞進 system prompt
-    3. 呼叫 LLM 回答
-    4. 如果 LLM 輸出 DATA，產生 Word 表單
-    """
-
-    # 1. 查詢 RAG 向量資料庫（已移除 category 過濾）
+    # 1. 查詢 RAG 向量資料庫
     try:
-        context = rag_search(
-            query=request.message,
-            top_k=5
-        )
+        context = rag_search(query=request.message, top_k=5)
     except Exception as e:
-        print(f"RAG 查詢失敗：{e}")
+        logger.error(f"RAG 查詢失敗：{e}")
         context = ""
 
-    # 2. 記錄使用者訊息
+    # 2. 記錄使用者訊息到對話歷史
     add_message(request.session_id, "user", request.message)
 
-    # 3. 組合 system prompt + RAG 參考資料
+    # 3. 動態組合當前這輪的 System Prompt
     system_with_context = SYSTEM_PROMPT
-
     if context:
-        system_with_context += f"""
-
-以下是參考資料，請優先根據這些內容回答：
-
-{context}
-"""
+        system_with_context += f"\n\n以下是參考資料，請優先根據這些內容回答：\n\n{context}"
     else:
-        system_with_context += """
-
-目前沒有查詢到足夠的參考資料。
-如果使用者問題需要資料庫內容才能回答，請誠實告知目前資料不足。
-"""
+        system_with_context += "\n\n目前沒有查詢到足夠的參考資料。如果使用者問題需要資料庫內容才能回答，請誠實告知目前資料不足。"
 
     # 4. 組合對話歷史
     messages = [
-    {"role": "system", "content": SYSTEM_PROMPT},
-    *get_history(request.session_id),
-]
+        {"role": "system", "content": system_with_context},
+        *get_history(request.session_id),
+    ]
 
     # 5. 呼叫 LLM
     try:
@@ -149,23 +128,27 @@ async def chat(request: ChatRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
-    # 6. 記錄 AI 回覆
-    add_message(request.session_id, "assistant", raw_reply)
-
-    # 7. 檢查是否已收集完成資料
+    # 6. 先解析資料與清洗回覆，確保髒代碼不進入記憶
     collected = extract_data(raw_reply)
+    final_reply = clean_reply(raw_reply)
 
+    # 7. 記錄 AI 回覆：只記錄洗乾淨後的純對話文字
+    add_message(request.session_id, "assistant", final_reply)
+
+    # 8. 檢查是否已收集完成資料並處理
     if collected:
         try:
             fill_template(collected, request.session_id)
         except Exception as e:
-            print(f"Word 產生失敗：{e}")
-
+            logger.error(f"Word 產生失敗：{e}")
+        
+        # 清除當前 Session 歷史紀錄
         clear_session(request.session_id)
+        logger.info(f"Session {request.session_id} 表單收集完畢，已清空歷史紀錄並產出需求單。")
 
-    # 8. 回傳乾淨回覆給前端
+    # 9. 回傳乾淨回覆與收集到的資料給前端
     return ChatResponse(
-        reply=clean_reply(raw_reply),
+        reply=final_reply,
         session_id=request.session_id,
         collected=collected,
     )
@@ -173,6 +156,4 @@ async def chat(request: ChatRequest):
 
 @router.get("/health")
 async def health_check():
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}

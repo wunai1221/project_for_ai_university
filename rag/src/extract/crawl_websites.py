@@ -32,7 +32,11 @@ WEBSITES = [
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "../../data/raw/websites")
 NOISE_TAGS = ["nav", "header", "footer", "script", "style", "aside", "form", "button"]
+<<<<<<< HEAD
+MAX_PAGES = 80
+=======
 MAX_PAGES = 20
+>>>>>>> 4745f2536beadefc9b2b8e5a7184942db2d98937
 # ============================================================
 
 

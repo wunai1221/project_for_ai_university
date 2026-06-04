@@ -1,24 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { MessageCircle, X, Send, Loader2 } from "lucide-react";
+import { sendChatMessage } from "@/lib/ai-chat.functions";
 
 type Msg = { role: "user" | "assistant"; content: string };
-
-// 對齊 Python 後端 chat.py 的 ChatResponse
-type Collected = {
-  name?: string | null;
-  phone?: string | null;
-  service?: string | null;
-  date?: string | null;
-  color?: string | null;
-  note?: string | null;
-};
-
-type ChatApiResponse = {
-  reply?: string;
-  session_id?: string;
-  collected?: Collected | null;
-};
 
 const GREETING: Msg = {
   role: "assistant",
@@ -26,93 +10,44 @@ const GREETING: Msg = {
     "您好，我是鉅昕鋼鐵 AI 客服 👋\n請告訴我您需要的服務。",
 };
 
-const CHAT_API_URL = "http://localhost:8000/api/chat";
-
-// 建立並保存 session_id（同一個瀏覽器分頁共用，避免後端 session_store 把每次當新對話）
-function createSessionId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
 export function AIChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const sessionIdRef = useRef<string>(createSessionId());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, loading, submitted]);
+  }, [messages, loading]);
 
   async function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
+
     const text = input.trim();
     if (!text || loading) return;
 
-    setMessages((m) => [...m, { role: "user", content: text }]);
+    const nextMessages: Msg[] = [...messages, { role: "user", content: text }];
+
+    setMessages(nextMessages);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch(CHAT_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          session_id: sessionIdRef.current,
-        }),
+      const result = await sendChatMessage({
+        data: {
+          messages: nextMessages,
+        },
       });
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      if (result.error) {
+        throw new Error(result.error);
       }
 
-      const json = (await res.json()) as ChatApiResponse;
-      const reply = json.reply || "...";
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
-
-      // 後端蒐集完五項資訊後會回傳 collected 物件
-      if (json.collected) {
-        const c = json.collected;
-
-        // 把 service / date / color / note 合併成 message 欄位寫入 Supabase
-        const messageParts: string[] = [];
-        if (c.service) messageParts.push(`服務內容：${c.service}`);
-        if (c.date) messageParts.push(`期望日期：${c.date}`);
-        if (c.color) messageParts.push(`顏色喜好：${c.color}`);
-        if (c.note) messageParts.push(`備註：${c.note}`);
-        const message = messageParts.join("\n") || "(無內容)";
-
-        const { error } = await supabase.from("inquiries").insert({
-          name: c.name ?? null,
-          phone: c.phone ?? null,
-          company: null,
-          email: null,
-          message,
-          source: "ai-chat",
-        });
-
-        if (error) {
-          console.error("Insert inquiry failed", error);
-          setMessages((m) => [
-            ...m,
-            { role: "assistant", content: "⚠️ 資料儲存失敗，請稍後再試或改用聯絡表單。" },
-          ]);
-        } else {
-          setSubmitted(true);
-          setMessages((m) => [
-            ...m,
-            { role: "assistant", content: "✅ 資料已成功送出！我們將盡快與您聯繫。" },
-          ]);
-          // 後端已 clear_session，前端也換新的 session_id 以便下一輪對話
-          sessionIdRef.current = createSessionId();
-        }
-      }
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: result.reply || "..." },
+      ]);
     } catch (err) {
       console.error("Chat API error", err);
       setMessages((m) => [
@@ -186,12 +121,6 @@ export function AIChatWidget() {
                 <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-3.5 py-2.5">
                   <Loader2 size={16} className="animate-spin text-accent" />
                 </div>
-              </div>
-            )}
-            {submitted && (
-              <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-300">
-                <CheckCircle2 size={16} />
-                <span>資料已成功送出！</span>
               </div>
             )}
           </div>
