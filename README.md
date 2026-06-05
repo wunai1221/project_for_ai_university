@@ -130,4 +130,131 @@ ticket_{session_id}_{YYYYMMDD_HHMMSS}.docx
 
 ---
 
-*最後更新：2026-06-03*
+# 鉅昕鋼鐵前端開啟方式
+
+---
+
+# 一、安裝 Node.js
+
+在執行前端專案前，請先安裝 Node.js。
+
+## 官方下載網址
+
+```txt
+https://nodejs.org/
+```
+
+建議安裝：
+
+```txt
+LTS（Long Term Support）版本
+```
+
+---
+
+# 二、確認 Node.js 安裝成功
+
+打開 VS Code Terminal 或 PowerShell，輸入：
+
+```bash
+node -v
+npm -v
+```
+
+---
+
+# 三、使用 VS Code 開啟專案
+
+請確認開啟的是：
+
+```txt
+專案最外層根目錄
+```
+
+也就是有：
+
+```txt
+package.json
+tsconfig.json
+```
+
+的那一層資料夾。
+
+---
+
+# 四、開啟 VS Code Terminal
+
+上方選單：
+
+```txt
+Terminal
+→
+New Terminal
+```
+
+---
+
+# 五、安裝前端套件
+
+在 Terminal 輸入：
+
+```bash
+npm install
+```
+
+或：
+
+```bash
+npm i
+```
+
+安裝完成後會出現：
+
+```txt
+node_modules/
+```
+
+資料夾。
+
+---
+
+# 六、啟動前端開發伺服器
+
+輸入：
+
+```bash
+npm run dev
+```
+
+如果專案使用 Bun：
+
+```bash
+bun dev
+```
+
+---
+
+# 七、開啟瀏覽器
+
+Terminal 會出現：
+
+```txt
+Local: http://localhost:8080/
+```
+
+或：
+
+```txt
+Local: http://localhost:5173/
+```
+
+直接：
+
+- Ctrl + 點擊網址
+- 或手動貼到瀏覽器
+
+即可開啟網站。
+
+---
+
+# update 0605
